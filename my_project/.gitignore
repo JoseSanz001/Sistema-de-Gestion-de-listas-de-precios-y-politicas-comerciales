@@ -27,3 +27,4 @@ Thumbs.db
 
 # Archivos de migraciones compilados (si no quieres incluirlos)
 */__pycache__/
+*.pyc
