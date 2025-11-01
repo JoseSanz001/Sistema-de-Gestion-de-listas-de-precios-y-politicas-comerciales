@@ -169,5 +169,3 @@ GESTIONLISTASPEDIDOS/
 ```
 
 ## Autores
-
-Sánchez Flores Jose 
