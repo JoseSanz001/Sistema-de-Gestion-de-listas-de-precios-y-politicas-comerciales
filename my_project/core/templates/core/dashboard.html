@@ -1,0 +1,189 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - {{ empresa.nombre }}{% endblock %}
+
+{% block content %}
+<!-- Empresa Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="bi bi-building-fill text-primary"></i> {{ empresa.nombre }}</h2>
+                <p class="text-muted mb-2"><i class="bi bi-credit-card"></i> RUC: {{ empresa.ruc }}</p>
+                <p class="mb-0">
+                    <i class="bi bi-geo-alt"></i> {{ empresa.direccion|default:"No registrada" }} |
+                    <i class="bi bi-telephone"></i> {{ empresa.telefono|default:"No registrado" }} |
+                    <i class="bi bi-envelope"></i> {{ empresa.email|default:"No registrado" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'empresas' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver a Empresas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-shop text-success"></i>
+            <h3 class="text-success">{{ total_sucursales }}</h3>
+            <p>Sucursales Activas</p>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-list-ul text-primary"></i>
+            <h3 class="text-primary">{{ total_listas }}</h3>
+            <p>Listas de Precios</p>
+        </div>
+    </div>
+</div>
+
+<!-- Sucursales -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="bi bi-shop"></i> Sucursales</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Dirección</th>
+                        <th>Teléfono</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sucursal in sucursales %}
+                    <tr>
+                        <td><strong>{{ sucursal.codigo }}</strong></td>
+                        <td>{{ sucursal.nombre }}</td>
+                        <td>{{ sucursal.direccion|default:"No registrada" }}</td>
+                        <td>{{ sucursal.telefono|default:"No registrado" }}</td>
+                        <td>
+                            {% if sucursal.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No hay sucursales registradas</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Listas de Precios -->
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="bi bi-list-ul"></i> Listas de Precios</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Sucursal</th>
+                        <th>Tipo</th>
+                        <th>Canal</th>
+                        <th>Vigencia</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lista in listas_precios %}
+                    <tr>
+                        <td><strong>{{ lista.nombre }}</strong></td>
+                        <td>{{ lista.sucursal.nombre|default:"Todas" }}</td>
+                        <td><span class="badge bg-info">{{ lista.get_tipo_display }}</span></td>
+                        <td><span class="badge bg-secondary">{{ lista.get_canal_display }}</span></td>
+                        <td>
+                            <small>
+                                {{ lista.fecha_inicio|date:"d/m/Y" }} - 
+                                {{ lista.fecha_fin|date:"d/m/Y"|default:"Sin límite" }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if lista.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="verDetallesLista({{ lista.id }})">
+                                <i class="bi bi-eye"></i> Ver
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No hay listas de precios</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles (placeholder) -->
+<div class="modal fade" id="detallesListaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Lista de Precios</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <p class="text-center">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function verDetallesLista(listaId) {
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('detallesListaModal'));
+    modal.show();
+    
+    // Cargar detalles via API
+    fetch(`/api/listas-precios/${listaId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('modalContent').innerHTML = `
+                <h5>${data.nombre}</h5>
+                <p><strong>Tipo:</strong> ${data.tipo}</p>
+                <p><strong>Canal:</strong> ${data.canal}</p>
+                <p><strong>Vigencia:</strong> ${data.fecha_inicio} - ${data.fecha_fin || 'Sin límite'}</p>
+                <a href="/api/listas-precios/${listaId}/precios/" class="btn btn-primary" target="_blank">
+                    Ver Precios en API
+                </a>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('modalContent').innerHTML = 
+                '<div class="alert alert-danger">Error al cargar detalles</div>';
+        });
+}
+</script>
+{% endblock %}

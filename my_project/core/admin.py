@@ -26,24 +26,37 @@ class SucursalAdmin(admin.ModelAdmin):
 
 @admin.register(LineaArticulo)
 class LineaArticuloAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'codigo', 'activo', 'fecha_creacion']
-    list_filter = ['activo', 'fecha_creacion']
-    search_fields = ['nombre', 'codigo']
+    list_display = ['nombre', 'codigo', 'empresa', 'activo', 'fecha_creacion']
+    list_filter = ['activo', 'empresa', 'fecha_creacion']
+    search_fields = ['nombre', 'codigo', 'empresa__nombre']
 
 
 @admin.register(GrupoArticulo)
 class GrupoArticuloAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'codigo', 'linea', 'activo', 'fecha_creacion']
-    list_filter = ['activo', 'linea', 'fecha_creacion']
-    search_fields = ['nombre', 'codigo']
+    list_display = ['nombre', 'codigo', 'empresa', 'linea', 'activo', 'fecha_creacion']
+    list_filter = ['activo', 'empresa', 'linea', 'fecha_creacion']
+    search_fields = ['nombre', 'codigo', 'empresa__nombre']
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filtrar líneas por empresa en el formulario"""
+        if db_field.name == "linea":
+            if request.GET.get('empresa'):
+                kwargs["queryset"] = LineaArticulo.objects.filter(empresa_id=request.GET.get('empresa'))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Articulo)
 class ArticuloAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'nombre', 'grupo', 'unidad_medida', 'ultimo_costo', 'activo']
-    list_filter = ['activo', 'grupo', 'fecha_creacion']
-    search_fields = ['codigo', 'nombre']
-
+    list_display = ['codigo', 'nombre', 'empresa', 'grupo', 'unidad_medida', 'ultimo_costo', 'activo']
+    list_filter = ['activo', 'empresa', 'grupo', 'fecha_creacion']
+    search_fields = ['codigo', 'nombre', 'empresa__nombre']
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filtrar grupos por empresa en el formulario"""
+        if db_field.name == "grupo":
+            if request.GET.get('empresa'):
+                kwargs["queryset"] = GrupoArticulo.objects.filter(empresa_id=request.GET.get('empresa'))
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 @admin.register(ListaPrecio)
 class ListaPrecioAdmin(admin.ModelAdmin):

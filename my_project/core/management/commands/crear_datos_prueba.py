@@ -4,7 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 from core.models import (
     Empresa, Sucursal, LineaArticulo, GrupoArticulo, Articulo,
-    ListaPrecio, PrecioArticulo, ReglaPrecio
+    ListaPrecio, PrecioArticulo, ReglaPrecio, CombinacionProducto
 )
 
 
@@ -14,8 +14,9 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS('Iniciando creación de datos de prueba...'))
 
-        # Limpiar datos existentes (opcional - comentar si no quieres borrar)
+        # Limpiar datos existentes
         self.stdout.write('Limpiando datos existentes...')
+        CombinacionProducto.objects.all().delete()
         ReglaPrecio.objects.all().delete()
         PrecioArticulo.objects.all().delete()
         ListaPrecio.objects.all().delete()
@@ -74,69 +75,115 @@ class Command(BaseCommand):
             activo=True
         )
 
-        # 3. Crear Líneas de Artículos
-        self.stdout.write('Creando líneas de artículos...')
-        linea_abarrotes = LineaArticulo.objects.create(
+        # 3. Crear Líneas de Artículos para EMPRESA 1
+        self.stdout.write('Creando líneas de artículos para Empresa 1...')
+        linea_abarrotes_emp1 = LineaArticulo.objects.create(
+            empresa=empresa1,
             nombre='Abarrotes',
             codigo='LIN-001',
             descripcion='Productos de abarrotes y consumo masivo',
             activo=True
         )
 
-        linea_bebidas = LineaArticulo.objects.create(
+        linea_bebidas_emp1 = LineaArticulo.objects.create(
+            empresa=empresa1,
             nombre='Bebidas',
             codigo='LIN-002',
             descripcion='Bebidas alcohólicas y no alcohólicas',
             activo=True
         )
 
-        linea_limpieza = LineaArticulo.objects.create(
+        linea_limpieza_emp1 = LineaArticulo.objects.create(
+            empresa=empresa1,
             nombre='Limpieza',
             codigo='LIN-003',
             descripcion='Productos de limpieza y aseo',
             activo=True
         )
 
-        # 4. Crear Grupos de Artículos
-        self.stdout.write('Creando grupos de artículos...')
-        grupo_arroz = GrupoArticulo.objects.create(
-            linea=linea_abarrotes,
+        # 4. Crear Líneas de Artículos para EMPRESA 2
+        self.stdout.write('Creando líneas de artículos para Empresa 2...')
+        linea_abarrotes_emp2 = LineaArticulo.objects.create(
+            empresa=empresa2,
+            nombre='Abarrotes',
+            codigo='LIN-001',
+            descripcion='Productos de abarrotes',
+            activo=True
+        )
+
+        linea_lacteos_emp2 = LineaArticulo.objects.create(
+            empresa=empresa2,
+            nombre='Lácteos',
+            codigo='LIN-002',
+            descripcion='Productos lácteos',
+            activo=True
+        )
+
+        # 5. Crear Grupos de Artículos para EMPRESA 1
+        self.stdout.write('Creando grupos de artículos para Empresa 1...')
+        grupo_arroz_emp1 = GrupoArticulo.objects.create(
+            empresa=empresa1,
+            linea=linea_abarrotes_emp1,
             nombre='Arroz',
             codigo='GRP-001',
             descripcion='Arroz de diferentes marcas',
             activo=True
         )
 
-        grupo_fideos = GrupoArticulo.objects.create(
-            linea=linea_abarrotes,
+        grupo_fideos_emp1 = GrupoArticulo.objects.create(
+            empresa=empresa1,
+            linea=linea_abarrotes_emp1,
             nombre='Fideos',
             codigo='GRP-002',
             descripcion='Fideos y pastas',
             activo=True
         )
 
-        grupo_gaseosas = GrupoArticulo.objects.create(
-            linea=linea_bebidas,
+        grupo_gaseosas_emp1 = GrupoArticulo.objects.create(
+            empresa=empresa1,
+            linea=linea_bebidas_emp1,
             nombre='Gaseosas',
             codigo='GRP-003',
             descripcion='Bebidas gaseosas',
             activo=True
         )
 
-        grupo_detergentes = GrupoArticulo.objects.create(
-            linea=linea_limpieza,
+        grupo_detergentes_emp1 = GrupoArticulo.objects.create(
+            empresa=empresa1,
+            linea=linea_limpieza_emp1,
             nombre='Detergentes',
             codigo='GRP-004',
             descripcion='Detergentes para ropa',
             activo=True
         )
 
-        # 5. Crear Artículos
-        self.stdout.write('Creando artículos...')
-        articulos = [
+        # 6. Crear Grupos de Artículos para EMPRESA 2
+        self.stdout.write('Creando grupos de artículos para Empresa 2...')
+        grupo_azucar_emp2 = GrupoArticulo.objects.create(
+            empresa=empresa2,
+            linea=linea_abarrotes_emp2,
+            nombre='Azúcar',
+            codigo='GRP-001',
+            descripcion='Azúcar blanca y rubia',
+            activo=True
+        )
+
+        grupo_leche_emp2 = GrupoArticulo.objects.create(
+            empresa=empresa2,
+            linea=linea_lacteos_emp2,
+            nombre='Leche',
+            codigo='GRP-002',
+            descripcion='Leche entera y descremada',
+            activo=True
+        )
+
+        # 7. Crear Artículos para EMPRESA 1
+        self.stdout.write('Creando artículos para Empresa 1...')
+        articulos_emp1 = [
             # Arroz
             Articulo.objects.create(
-                grupo=grupo_arroz,
+                empresa=empresa1,
+                grupo=grupo_arroz_emp1,
                 codigo='ART-001',
                 nombre='Arroz Superior x 5kg',
                 descripcion='Arroz superior de primera calidad',
@@ -145,7 +192,8 @@ class Command(BaseCommand):
                 activo=True
             ),
             Articulo.objects.create(
-                grupo=grupo_arroz,
+                empresa=empresa1,
+                grupo=grupo_arroz_emp1,
                 codigo='ART-002',
                 nombre='Arroz Extra x 1kg',
                 descripcion='Arroz extra en bolsa de 1kg',
@@ -155,7 +203,8 @@ class Command(BaseCommand):
             ),
             # Fideos
             Articulo.objects.create(
-                grupo=grupo_fideos,
+                empresa=empresa1,
+                grupo=grupo_fideos_emp1,
                 codigo='ART-003',
                 nombre='Fideos Spaghetti x 500g',
                 descripcion='Fideos tipo spaghetti',
@@ -164,7 +213,8 @@ class Command(BaseCommand):
                 activo=True
             ),
             Articulo.objects.create(
-                grupo=grupo_fideos,
+                empresa=empresa1,
+                grupo=grupo_fideos_emp1,
                 codigo='ART-004',
                 nombre='Fideos Corbata x 500g',
                 descripcion='Fideos tipo corbata',
@@ -174,7 +224,8 @@ class Command(BaseCommand):
             ),
             # Gaseosas
             Articulo.objects.create(
-                grupo=grupo_gaseosas,
+                empresa=empresa1,
+                grupo=grupo_gaseosas_emp1,
                 codigo='ART-005',
                 nombre='Gaseosa Cola 2L',
                 descripcion='Gaseosa sabor cola de 2 litros',
@@ -183,7 +234,8 @@ class Command(BaseCommand):
                 activo=True
             ),
             Articulo.objects.create(
-                grupo=grupo_gaseosas,
+                empresa=empresa1,
+                grupo=grupo_gaseosas_emp1,
                 codigo='ART-006',
                 nombre='Gaseosa Naranja 2L',
                 descripcion='Gaseosa sabor naranja de 2 litros',
@@ -193,7 +245,8 @@ class Command(BaseCommand):
             ),
             # Detergentes
             Articulo.objects.create(
-                grupo=grupo_detergentes,
+                empresa=empresa1,
+                grupo=grupo_detergentes_emp1,
                 codigo='ART-007',
                 nombre='Detergente en Polvo 1kg',
                 descripcion='Detergente para ropa en polvo',
@@ -202,7 +255,8 @@ class Command(BaseCommand):
                 activo=True
             ),
             Articulo.objects.create(
-                grupo=grupo_detergentes,
+                empresa=empresa1,
+                grupo=grupo_detergentes_emp1,
                 codigo='ART-008',
                 nombre='Detergente Líquido 900ml',
                 descripcion='Detergente líquido para ropa',
@@ -212,7 +266,52 @@ class Command(BaseCommand):
             ),
         ]
 
-        # 6. Crear Listas de Precios
+        # 8. Crear Artículos para EMPRESA 2
+        self.stdout.write('Creando artículos para Empresa 2...')
+        articulos_emp2 = [
+            Articulo.objects.create(
+                empresa=empresa2,
+                grupo=grupo_azucar_emp2,
+                codigo='ART-001',
+                nombre='Azúcar Blanca x 1kg',
+                descripcion='Azúcar blanca refinada',
+                unidad_medida='UND',
+                ultimo_costo=Decimal('3.50'),
+                activo=True
+            ),
+            Articulo.objects.create(
+                empresa=empresa2,
+                grupo=grupo_azucar_emp2,
+                codigo='ART-002',
+                nombre='Azúcar Rubia x 1kg',
+                descripcion='Azúcar rubia orgánica',
+                unidad_medida='UND',
+                ultimo_costo=Decimal('4.00'),
+                activo=True
+            ),
+            Articulo.objects.create(
+                empresa=empresa2,
+                grupo=grupo_leche_emp2,
+                codigo='ART-003',
+                nombre='Leche Entera 1L',
+                descripcion='Leche entera larga vida',
+                unidad_medida='UND',
+                ultimo_costo=Decimal('4.80'),
+                activo=True
+            ),
+            Articulo.objects.create(
+                empresa=empresa2,
+                grupo=grupo_leche_emp2,
+                codigo='ART-004',
+                nombre='Leche Descremada 1L',
+                descripcion='Leche descremada light',
+                unidad_medida='UND',
+                ultimo_costo=Decimal('5.20'),
+                activo=True
+            ),
+        ]
+
+        # 9. Crear Listas de Precios
         self.stdout.write('Creando listas de precios...')
         hoy = timezone.now().date()
         
@@ -228,7 +327,7 @@ class Command(BaseCommand):
             activo=True
         )
 
-        # Lista Mayorista para Sucursal 1
+        # Lista Mayorista para Sucursal 1 (Empresa 1)
         lista_mayorista_suc1 = ListaPrecio.objects.create(
             empresa=empresa1,
             sucursal=sucursal1,
@@ -240,23 +339,23 @@ class Command(BaseCommand):
             activo=True
         )
 
-        # Lista Minorista para Sucursal 2
-        lista_minorista_suc2 = ListaPrecio.objects.create(
-            empresa=empresa1,
-            sucursal=sucursal2,
-            nombre='Lista Minorista - Callao',
-            tipo='MINORISTA',
-            canal='TIENDA',
-            fecha_inicio=hoy - timedelta(days=10),
-            fecha_fin=hoy + timedelta(days=355),
+        # Lista para Empresa 2
+        lista_general_emp2 = ListaPrecio.objects.create(
+            empresa=empresa2,
+            sucursal=None,
+            nombre='Lista General Trujillo 2025',
+            tipo='GENERAL',
+            canal='TODOS',
+            fecha_inicio=hoy - timedelta(days=20),
+            fecha_fin=hoy + timedelta(days=345),
             activo=True
         )
 
-        # 7. Crear Precios de Artículos
-        self.stdout.write('Creando precios de artículos...')
+        # 10. Crear Precios de Artículos para EMPRESA 1
+        self.stdout.write('Creando precios de artículos para Empresa 1...')
         
-        # Precios para Lista General
-        for articulo in articulos:
+        # Precios para Lista General Empresa 1
+        for articulo in articulos_emp1:
             margen = Decimal('1.35')  # 35% de margen
             PrecioArticulo.objects.create(
                 lista_precio=lista_general_emp1,
@@ -266,8 +365,8 @@ class Command(BaseCommand):
                 descuento_proveedor=Decimal('0.00')
             )
 
-        # Precios para Lista Mayorista (márgenes menores)
-        for articulo in articulos:
+        # Precios para Lista Mayorista Empresa 1
+        for articulo in articulos_emp1:
             margen = Decimal('1.20')  # 20% de margen
             PrecioArticulo.objects.create(
                 lista_precio=lista_mayorista_suc1,
@@ -277,21 +376,21 @@ class Command(BaseCommand):
                 descuento_proveedor=Decimal('0.00')
             )
 
-        # Precios para Lista Minorista (márgenes mayores)
-        for articulo in articulos:
-            margen = Decimal('1.50')  # 50% de margen
+        # 11. Crear Precios de Artículos para EMPRESA 2
+        self.stdout.write('Creando precios de artículos para Empresa 2...')
+        for articulo in articulos_emp2:
+            margen = Decimal('1.40')  # 40% de margen
             PrecioArticulo.objects.create(
-                lista_precio=lista_minorista_suc2,
+                lista_precio=lista_general_emp2,
                 articulo=articulo,
                 precio_base=articulo.ultimo_costo * margen,
                 bajo_costo=False,
                 descuento_proveedor=Decimal('0.00')
             )
 
-        # 8. Crear Reglas de Precio
+        # 12. Crear Reglas de Precio para EMPRESA 1
         self.stdout.write('Creando reglas de precio...')
 
-        # Regla: Descuento por volumen (Escala de Unidades)
         ReglaPrecio.objects.create(
             lista_precio=lista_mayorista_suc1,
             nombre='Descuento por Volumen - 10 a 50 unidades',
@@ -299,7 +398,7 @@ class Command(BaseCommand):
             tipo_ajuste='PORCENTAJE',
             cantidad_minima=10,
             cantidad_maxima=50,
-            valor_ajuste=Decimal('5.00'),  # 5% de descuento
+            valor_ajuste=Decimal('5.00'),
             prioridad=1,
             activo=True
         )
@@ -311,12 +410,11 @@ class Command(BaseCommand):
             tipo_ajuste='PORCENTAJE',
             cantidad_minima=51,
             cantidad_maxima=None,
-            valor_ajuste=Decimal('10.00'),  # 10% de descuento
+            valor_ajuste=Decimal('10.00'),
             prioridad=1,
             activo=True
         )
 
-        # Regla: Descuento por monto total de pedido
         ReglaPrecio.objects.create(
             lista_precio=lista_general_emp1,
             nombre='Descuento por Pedido Mayor a S/. 1000',
@@ -324,22 +422,46 @@ class Command(BaseCommand):
             tipo_ajuste='PORCENTAJE',
             monto_minimo=Decimal('1000.00'),
             monto_maximo=None,
-            valor_ajuste=Decimal('3.00'),  # 3% de descuento
+            valor_ajuste=Decimal('3.00'),
             prioridad=2,
             activo=True
         )
 
-        # Regla: Descuento especial para línea de abarrotes
-        ReglaPrecio.objects.create(
-            lista_precio=lista_minorista_suc2,
-            nombre='Promoción Abarrotes - Tienda',
-            tipo_regla='CANAL',
-            tipo_ajuste='PORCENTAJE',
-            linea_articulo=linea_abarrotes,
-            valor_ajuste=Decimal('2.00'),  # 2% de descuento
-            prioridad=3,
+        # 13. Crear Combinaciones de Productos para EMPRESA 1
+        self.stdout.write('Creando combinaciones de productos...')
+        
+        CombinacionProducto.objects.create(
+            lista_precio=lista_general_emp1,
+            nombre='Combo Abarrotes - 3 productos',
+            descripcion='Descuento por compra de 3 o más productos de abarrotes',
+            linea_articulo=linea_abarrotes_emp1,
+            cantidad_minima=3,
+            tipo_descuento='PORCENTAJE',
+            valor_descuento=Decimal('5.00'),
             activo=True
         )
+        
+        combo_bebidas = CombinacionProducto.objects.create(
+            lista_precio=lista_mayorista_suc1,
+            nombre='Combo Bebidas - 2x1',
+            descripcion='Descuento especial por compra de 2 o más gaseosas',
+            grupo_articulo=grupo_gaseosas_emp1,
+            cantidad_minima=2,
+            tipo_descuento='PORCENTAJE',
+            valor_descuento=Decimal('8.00'),
+            activo=True
+        )
+        
+        combo_pack = CombinacionProducto.objects.create(
+            lista_precio=lista_mayorista_suc1,
+            nombre='Pack Limpieza Completo',
+            descripcion='Pack de detergente + líquido con descuento',
+            cantidad_minima=2,
+            tipo_descuento='MONTO_FIJO',
+            valor_descuento=Decimal('3.00'),
+            activo=True
+        )
+        combo_pack.articulos.add(articulos_emp1[6], articulos_emp1[7])
 
         self.stdout.write(self.style.SUCCESS('✓ Datos de prueba creados exitosamente!'))
         self.stdout.write(self.style.SUCCESS(f'  - {Empresa.objects.count()} empresas'))
@@ -350,3 +472,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  - {ListaPrecio.objects.count()} listas de precios'))
         self.stdout.write(self.style.SUCCESS(f'  - {PrecioArticulo.objects.count()} precios de artículos'))
         self.stdout.write(self.style.SUCCESS(f'  - {ReglaPrecio.objects.count()} reglas de precio'))
+        self.stdout.write(self.style.SUCCESS(f'  - {CombinacionProducto.objects.count()} combinaciones de productos'))

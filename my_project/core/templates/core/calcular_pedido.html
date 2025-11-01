@@ -1,0 +1,443 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Calcular Pedido Completo - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="bi bi-cart-check"></i> Calculadora de Pedidos Completos</h3>
+        <small class="text-white">Evalúa descuentos por combinaciones de productos</small>
+    </div>
+    <div class="card-body">
+        <form id="formCalcularPedido">
+            {% csrf_token %}
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-building"></i> Empresa *
+                    </label>
+                    <select name="empresa_id" id="empresa_id" class="form-select" required>
+                        <option value="">Seleccione una empresa...</option>
+                        {% for empresa in empresas %}
+                        <option value="{{ empresa.id }}">{{ empresa.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-shop"></i> Sucursal
+                    </label>
+                    <select name="sucursal_id" id="sucursal_id" class="form-select">
+                        <option value="">Todas (General)</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-shop-window"></i> Canal de Venta
+                    </label>
+                    <select name="canal" id="canal" class="form-select">
+                        {% for value, label in canales %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="bi bi-list-ul"></i> Items del Pedido</h5>
+                <button type="button" class="btn btn-success btn-sm" onclick="agregarItem()">
+                    <i class="bi bi-plus-circle"></i> Agregar Item
+                </button>
+            </div>
+            
+            <div id="items-container">
+                <div class="row mb-2 item-row">
+                    <div class="col-md-7">
+                        <select name="articulo_id[]" class="form-select articulo-select" required>
+                            <option value="">Seleccione un artículo...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="cantidad[]" class="form-control" 
+                               placeholder="Cantidad" value="1" min="1" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-sm w-100" 
+                                onclick="eliminarItem(this)" disabled>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-calculator"></i> Calcular Pedido Completo
+                </button>
+            </div>
+        </form>
+        
+        <!-- Resultado -->
+        <div id="resultado-container" style="display: none;">
+            <hr class="my-4">
+            <h4 class="mb-4 text-center">
+                <i class="bi bi-check-circle-fill text-success"></i> 
+                Resultado del Pedido
+            </h4>
+            
+            <div id="resultado-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let articulosData = [];
+
+// Cargar sucursales y artículos al seleccionar empresa
+document.getElementById('empresa_id').addEventListener('change', function() {
+    const empresaId = this.value;
+    const sucursalSelect = document.getElementById('sucursal_id');
+    
+    sucursalSelect.innerHTML = '<option value="">Todas (General)</option>';
+    
+    if (empresaId) {
+        // Cargar sucursales
+        fetch(`/api/sucursales/?empresa_id=${empresaId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.results.forEach(sucursal => {
+                    const option = document.createElement('option');
+                    option.value = sucursal.id;
+                    option.textContent = sucursal.nombre;
+                    sucursalSelect.appendChild(option);
+                });
+            });
+        
+        // Cargar artículos de la empresa
+        cargarArticulos(empresaId);
+    } else {
+        // Limpiar artículos si no hay empresa seleccionada
+        articulosData = [];
+        actualizarSelectsArticulos();
+    }
+});
+
+function cargarArticulos(empresaId) {
+    console.log('Cargando artículos para empresa:', empresaId);
+    
+    fetch(`/api/articulos/?empresa_id=${empresaId}`)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Artículos recibidos:', data);
+            
+            // Verificar si data tiene la estructura esperada
+            if (data.results && Array.isArray(data.results)) {
+                articulosData = data.results;
+            } else if (Array.isArray(data)) {
+                articulosData = data;
+            } else {
+                console.error('Formato de datos inesperado:', data);
+                articulosData = [];
+            }
+            
+            console.log('Total artículos:', articulosData.length);
+            
+            if (articulosData.length === 0) {
+                alert('Esta empresa no tiene artículos registrados');
+            }
+            
+            actualizarSelectsArticulos();
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert('Error al cargar los artículos de la empresa: ' + error.message);
+            articulosData = [];
+            actualizarSelectsArticulos();
+        });
+}
+
+function actualizarSelectsArticulos() {
+    document.querySelectorAll('.articulo-select').forEach(select => {
+        const valorActual = select.value;
+        select.innerHTML = '<option value="">Seleccione un artículo...</option>';
+        
+        articulosData.forEach(articulo => {
+            const option = document.createElement('option');
+            option.value = articulo.id;
+            option.textContent = `${articulo.codigo} - ${articulo.nombre} (Costo: S/. ${articulo.ultimo_costo})`;
+            if (articulo.id == valorActual) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    });
+}
+
+function agregarItem() {
+    const empresaId = document.getElementById('empresa_id').value;
+    
+    if (!empresaId) {
+        alert('Por favor, seleccione primero una empresa');
+        return;
+    }
+    
+    const container = document.getElementById('items-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-2 item-row';
+    newRow.innerHTML = `
+        <div class="col-md-7">
+            <select name="articulo_id[]" class="form-select articulo-select" required>
+                <option value="">Seleccione un artículo...</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" name="cantidad[]" class="form-control" 
+                   placeholder="Cantidad" value="1" min="1" required>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-danger btn-sm w-100" 
+                    onclick="eliminarItem(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    actualizarSelectsArticulos();
+}
+
+function eliminarItem(button) {
+    const itemsContainer = document.getElementById('items-container');
+    const items = itemsContainer.querySelectorAll('.item-row');
+    
+    if (items.length > 1) {
+        button.closest('.item-row').remove();
+    } else {
+        alert('Debe mantener al menos un item en el pedido');
+    }
+}
+
+// Submit del formulario
+document.getElementById('formCalcularPedido').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const empresaId = document.getElementById('empresa_id').value;
+    const sucursalId = document.getElementById('sucursal_id').value || null;
+    const canal = document.getElementById('canal').value;
+    
+    if (!empresaId) {
+        alert('Por favor, seleccione una empresa');
+        return;
+    }
+    
+    const articuloIds = Array.from(document.querySelectorAll('select[name="articulo_id[]"]'))
+        .map(select => select.value)
+        .filter(id => id !== '');
+    
+    const cantidades = Array.from(document.querySelectorAll('input[name="cantidad[]"]'))
+        .map(input => parseInt(input.value));
+    
+    if (articuloIds.length === 0) {
+        alert('Debe seleccionar al menos un artículo');
+        return;
+    }
+    
+    const items = articuloIds.map((articuloId, index) => ({
+        articulo_id: parseInt(articuloId),
+        cantidad: cantidades[index]
+    }));
+    
+    const data = {
+        empresa_id: parseInt(empresaId),
+        sucursal_id: sucursalId ? parseInt(sucursalId) : null,
+        canal: canal,
+        items: items
+    };
+    
+    // Mostrar loading
+    const btnSubmit = this.querySelector('button[type="submit"]');
+    const btnText = btnSubmit.innerHTML;
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="bi bi-hourglass-split"></i> Calculando...';
+    
+    // Llamar a la API
+    fetch('/api/pedidos/calcular_pedido/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            mostrarResultado(data);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al calcular el pedido: ' + error);
+    })
+    .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = btnText;
+    });
+});
+
+function mostrarResultado(data) {
+    const container = document.getElementById('resultado-content');
+    let html = '';
+    
+    // Verificar si hay items con error
+    const itemsConError = data.items.filter(item => item.error);
+    if (itemsConError.length > 0) {
+        html += '<div class="alert alert-warning">';
+        html += '<strong><i class="bi bi-exclamation-triangle"></i> Algunos items no pudieron ser calculados:</strong><ul>';
+        itemsConError.forEach(item => {
+            html += `<li>${item.error}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    // Items válidos
+    const itemsValidos = data.items.filter(item => !item.error);
+    
+    if (itemsValidos.length === 0) {
+        html += '<div class="alert alert-danger">No se pudo calcular ningún item del pedido.</div>';
+        container.innerHTML = html;
+        document.getElementById('resultado-container').style.display = 'block';
+        return;
+    }
+    
+    // Resumen
+    html += `
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stat-card bg-primary text-white">
+                    <i class="bi bi-box-seam"></i>
+                    <h3>${itemsValidos.length}</h3>
+                    <p>Items Calculados</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card bg-success text-white">
+                    <i class="bi bi-cash-stack"></i>
+                    <h3>S/. ${data.resumen.monto_total.toFixed(2)}</h3>
+                    <p>Total del Pedido</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card bg-info text-white">
+                    <i class="bi bi-graph-down"></i>
+                    <h3>${(((data.resumen.monto_pedido_estimado - data.resumen.monto_total) / data.resumen.monto_pedido_estimado) * 100).toFixed(1)}%</h3>
+                    <p>Descuento Total</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Tabla de items
+    html += `
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Detalle de Items</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th>Cantidad</th>
+                                <th>Precio Base</th>
+                                <th>Precio Final</th>
+                                <th>Descuento</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    itemsValidos.forEach(item => {
+        const descuento = item.porcentaje_descuento || 0;
+        html += `
+            <tr>
+                <td><strong>${item.articulo_codigo || 'N/A'}</strong></td>
+                <td>${item.articulo_nombre || 'N/A'}</td>
+                <td>${item.cantidad}</td>
+                <td>S/. ${item.precio_base.toFixed(2)}</td>
+                <td><strong class="text-success">S/. ${item.precio_final.toFixed(2)}</strong></td>
+                <td><span class="badge bg-success">${descuento.toFixed(1)}%</span></td>
+                <td><strong>S/. ${item.subtotal.toFixed(2)}</strong></td>
+            </tr>
+        `;
+        
+        // Mostrar reglas aplicadas
+        if (item.reglas_aplicadas && item.reglas_aplicadas.length > 0) {
+            html += `
+                <tr>
+                    <td colspan="7" class="bg-light">
+                        <small><i class="bi bi-tag"></i> <strong>Reglas:</strong> `;
+            item.reglas_aplicadas.forEach(regla => {
+                html += `<span class="badge bg-info me-1">${regla.nombre} (-${regla.valor_ajuste}%)</span>`;
+            });
+            html += `</small></td>
+                </tr>
+            `;
+        }
+        
+        // Mostrar combinaciones aplicadas
+        if (item.combinaciones_aplicadas && item.combinaciones_aplicadas.length > 0) {
+            html += `
+                <tr>
+                    <td colspan="7" class="bg-warning bg-opacity-25">
+                        <small><i class="bi bi-gift"></i> <strong>Combos:</strong> `;
+            item.combinaciones_aplicadas.forEach(combo => {
+                const valor = combo.tipo_descuento === 'PORCENTAJE' 
+                    ? `-${combo.valor_descuento}%` 
+                    : `-S/. ${combo.valor_descuento}`;
+                html += `<span class="badge bg-warning text-dark me-1">${combo.nombre} (${valor})</span>`;
+            });
+            html += `</small></td>
+                </tr>
+            `;
+        }
+    });
+    
+    html += `
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="6" class="text-end">TOTAL:</th>
+                                <th>S/. ${data.resumen.monto_total.toFixed(2)}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    document.getElementById('resultado-container').style.display = 'block';
+    
+    // Scroll al resultado
+    document.getElementById('resultado-container').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Empresas - Sistema de Gestión de Precios{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="bi bi-building"></i> Gestión de Empresas</h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for empresa in empresas %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h4 class="card-title">
+                                    <i class="bi bi-building-fill text-primary"></i>
+                                    {{ empresa.nombre }}
+                                </h4>
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-credit-card"></i> RUC: {{ empresa.ruc }}
+                                </p>
+                            </div>
+                            {% if empresa.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h3 class="text-primary mb-0">{{ empresa.total_sucursales }}</h3>
+                                    <small class="text-muted">Sucursales</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-success mb-0">{{ empresa.total_listas }}</h3>
+                                <small class="text-muted">Listas de Precios</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p class="mb-1">
+                                <i class="bi bi-geo-alt"></i> 
+                                <strong>Dirección:</strong> {{ empresa.direccion|default:"No registrada" }}
+                            </p>
+                            <p class="mb-1">
+                                <i class="bi bi-telephone"></i> 
+                                <strong>Teléfono:</strong> {{ empresa.telefono|default:"No registrado" }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="bi bi-envelope"></i> 
+                                <strong>Email:</strong> {{ empresa.email|default:"No registrado" }}
+                            </p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'dashboard-empresa' empresa.id %}" class="btn btn-primary">
+                                <i class="bi bi-speedometer2"></i> Ver Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            <i class="bi bi-calendar"></i> 
+                            Creado: {{ empresa.fecha_creacion|date:"d/m/Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle"></i> No hay empresas registradas
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

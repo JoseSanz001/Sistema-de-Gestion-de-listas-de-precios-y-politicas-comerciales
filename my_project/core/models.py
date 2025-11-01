@@ -44,9 +44,10 @@ class Sucursal(models.Model):
 
 
 class LineaArticulo(models.Model):
-    """Modelo para representar líneas de artículos"""
+    """Modelo para representar líneas de artículos por empresa"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='lineas_articulos')  # NUEVO
     nombre = models.CharField(max_length=200)
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50)
     descripcion = models.TextField(blank=True)
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -55,16 +56,18 @@ class LineaArticulo(models.Model):
         db_table = 'linea_articulo'
         verbose_name = 'Línea de Artículo'
         verbose_name_plural = 'Líneas de Artículos'
+        unique_together = ['empresa', 'codigo']  # Código único por empresa
 
     def __str__(self):
-        return self.nombre
+        return f"{self.empresa.nombre} - {self.nombre}"
 
 
 class GrupoArticulo(models.Model):
-    """Modelo para representar grupos de artículos"""
+    """Modelo para representar grupos de artículos por empresa"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='grupos_articulos')  # NUEVO
     linea = models.ForeignKey(LineaArticulo, on_delete=models.CASCADE, related_name='grupos')
     nombre = models.CharField(max_length=200)
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50)
     descripcion = models.TextField(blank=True)
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -73,15 +76,23 @@ class GrupoArticulo(models.Model):
         db_table = 'grupo_articulo'
         verbose_name = 'Grupo de Artículo'
         verbose_name_plural = 'Grupos de Artículos'
+        unique_together = ['empresa', 'codigo']  # Código único por empresa
 
     def __str__(self):
-        return f"{self.linea.nombre} - {self.nombre}"
+        return f"{self.empresa.nombre} - {self.linea.nombre} - {self.nombre}"
+    
+    def save(self, *args, **kwargs):
+        # Validar que la línea pertenezca a la misma empresa
+        if self.linea.empresa != self.empresa:
+            raise ValueError("La línea debe pertenecer a la misma empresa")
+        super().save(*args, **kwargs)
 
 
 class Articulo(models.Model):
-    """Modelo para representar artículos/productos"""
+    """Modelo para representar artículos/productos por empresa"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='articulos')  # NUEVO
     grupo = models.ForeignKey(GrupoArticulo, on_delete=models.CASCADE, related_name='articulos')
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True)
     unidad_medida = models.CharField(max_length=20, default='UND')
@@ -99,10 +110,16 @@ class Articulo(models.Model):
         db_table = 'articulo'
         verbose_name = 'Artículo'
         verbose_name_plural = 'Artículos'
+        unique_together = ['empresa', 'codigo']  # Código único por empresa
 
     def __str__(self):
-        return f"{self.codigo} - {self.nombre}"
-
+        return f"{self.empresa.nombre} - {self.codigo} - {self.nombre}"
+    
+    def save(self, *args, **kwargs):
+        # Validar que el grupo pertenezca a la misma empresa
+        if self.grupo.empresa != self.empresa:
+            raise ValueError("El grupo debe pertenecer a la misma empresa")
+        super().save(*args, **kwargs)
 
 class ListaPrecio(models.Model):
     """Modelo para listas de precios por empresa/sucursal"""

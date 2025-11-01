@@ -46,6 +46,16 @@ class LineaArticuloViewSet(viewsets.ModelViewSet):
     queryset = LineaArticulo.objects.all()
     serializer_class = LineaArticuloSerializer
     # permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Permite filtrar líneas por empresa"""
+        queryset = LineaArticulo.objects.all()
+        empresa_id = self.request.query_params.get('empresa_id', None)
+        
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
+        
+        return queryset
 
 
 class GrupoArticuloViewSet(viewsets.ModelViewSet):
@@ -55,11 +65,16 @@ class GrupoArticuloViewSet(viewsets.ModelViewSet):
     # permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Permite filtrar grupos por línea"""
+        """Permite filtrar grupos por empresa y/o línea"""
         queryset = GrupoArticulo.objects.all()
+        empresa_id = self.request.query_params.get('empresa_id', None)
         linea_id = self.request.query_params.get('linea_id', None)
+        
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
         if linea_id:
             queryset = queryset.filter(linea_id=linea_id)
+        
         return queryset
 
 
@@ -70,18 +85,20 @@ class ArticuloViewSet(viewsets.ModelViewSet):
     # permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Permite filtrar artículos por grupo o línea"""
+        """Permite filtrar artículos por empresa, grupo o línea"""
         queryset = Articulo.objects.all()
+        empresa_id = self.request.query_params.get('empresa_id', None)
         grupo_id = self.request.query_params.get('grupo_id', None)
         linea_id = self.request.query_params.get('linea_id', None)
         
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
         if grupo_id:
             queryset = queryset.filter(grupo_id=grupo_id)
         elif linea_id:
             queryset = queryset.filter(grupo__linea_id=linea_id)
         
         return queryset
-
 
 class ListaPrecioViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar listas de precios"""
@@ -247,3 +264,177 @@ class PrecioCalculoViewSet(viewsets.ViewSet):
         response_serializer.is_valid()
         
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+    
+# ============================================
+# VISTAS PARA FRONTEND (HTML)
+# ============================================
+
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Count
+
+def home(request):
+    """Vista principal del sistema"""
+    context = {
+        'total_empresas': Empresa.objects.filter(activo=True).count(),
+        'total_sucursales': Sucursal.objects.filter(activo=True).count(),
+        'total_articulos': Articulo.objects.filter(activo=True).count(),
+        'total_listas': ListaPrecio.objects.filter(activo=True).count(),
+        'listas_activas': ListaPrecio.objects.filter(activo=True)[:5],
+    }
+    return render(request, 'core/index.html', context)
+
+
+def empresas_view(request):
+    """Vista de empresas"""
+    empresas = Empresa.objects.filter(activo=True).annotate(
+        total_sucursales=Count('sucursales'),
+        total_listas=Count('listas_precios')
+    )
+    context = {
+        'empresas': empresas,
+    }
+    return render(request, 'core/empresas.html', context)
+
+
+def dashboard_empresa(request, empresa_id):
+    """Dashboard de una empresa específica"""
+    empresa = get_object_or_404(Empresa, id=empresa_id)
+    
+    context = {
+        'empresa': empresa,
+        'sucursales': empresa.sucursales.filter(activo=True),
+        'listas_precios': empresa.listas_precios.filter(activo=True),
+        'total_sucursales': empresa.sucursales.filter(activo=True).count(),
+        'total_listas': empresa.listas_precios.filter(activo=True).count(),
+    }
+    return render(request, 'core/dashboard.html', context)
+
+
+def calcular_precio_view(request):
+    """Vista para calcular precios"""
+    empresas = Empresa.objects.filter(activo=True)
+    
+    resultado = None
+    if request.method == 'POST':
+        # Procesar el formulario
+        empresa_id = request.POST.get('empresa_id')
+        sucursal_id = request.POST.get('sucursal_id') or None
+        articulo_id = request.POST.get('articulo_id')
+        canal = request.POST.get('canal', 'TODOS')
+        cantidad = int(request.POST.get('cantidad', 1))
+        monto_pedido = float(request.POST.get('monto_pedido_total', 0))
+        
+        # Calcular precio
+        resultado = PrecioService.calcular_precio(
+            empresa_id=int(empresa_id),
+            sucursal_id=int(sucursal_id) if sucursal_id else None,
+            articulo_id=int(articulo_id),
+            canal=canal,
+            cantidad=cantidad,
+            monto_pedido_total=monto_pedido
+        )
+    
+    context = {
+        'empresas': empresas,
+        'canales': ListaPrecio.CANAL_CHOICES,
+        'resultado': resultado,
+    }
+    return render(request, 'core/calcular_precio.html', context)
+
+class PedidoCalculoViewSet(viewsets.ViewSet):
+    """ViewSet para calcular precios de pedidos completos con combinaciones"""
+    
+    @action(detail=False, methods=['post'])
+    def calcular_pedido(self, request):
+        """
+        Calcula el precio final de un pedido completo evaluando combinaciones.
+        
+        Request body example:
+        {
+            "empresa_id": 1,
+            "sucursal_id": 1,
+            "canal": "TIENDA",
+            "items": [
+                {"articulo_id": 1, "cantidad": 5},
+                {"articulo_id": 2, "cantidad": 3},
+                {"articulo_id": 3, "cantidad": 10}
+            ]
+        }
+        """
+        try:
+            empresa_id = request.data.get('empresa_id')
+            sucursal_id = request.data.get('sucursal_id')
+            canal = request.data.get('canal', 'TODOS')
+            items = request.data.get('items', [])
+            
+            if not empresa_id or not items:
+                return Response(
+                    {'error': 'Debe proporcionar empresa_id e items'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Calcular monto total del pedido (estimado con costos)
+            monto_pedido_total = 0
+            for item in items:
+                try:
+                    articulo = Articulo.objects.get(id=item['articulo_id'])
+                    monto_pedido_total += float(articulo.ultimo_costo) * item['cantidad']
+                except Articulo.DoesNotExist:
+                    pass
+            
+            # Calcular precio de cada item
+            resultados = []
+            total_pedido = 0
+            
+            for item in items:
+                resultado = PrecioService.calcular_precio(
+                    empresa_id=empresa_id,
+                    sucursal_id=sucursal_id,
+                    articulo_id=item['articulo_id'],
+                    canal=canal,
+                    cantidad=item['cantidad'],
+                    monto_pedido_total=monto_pedido_total,
+                    items_pedido=items  # Pasar todos los items para evaluar combinaciones
+                )
+                
+                if 'error' not in resultado:
+                    subtotal = resultado['precio_final'] * item['cantidad']
+                    total_pedido += subtotal
+                    
+                    resultado['cantidad'] = item['cantidad']
+                    resultado['subtotal'] = round(subtotal, 2)
+                    
+                    # Obtener info del artículo
+                    try:
+                        articulo = Articulo.objects.get(id=item['articulo_id'])
+                        resultado['articulo_codigo'] = articulo.codigo
+                        resultado['articulo_nombre'] = articulo.nombre
+                    except Articulo.DoesNotExist:
+                        pass
+                
+                resultados.append(resultado)
+            
+            return Response({
+                'items': resultados,
+                'resumen': {
+                    'total_items': len(items),
+                    'monto_total': round(total_pedido, 2),
+                    'monto_pedido_estimado': round(monto_pedido_total, 2)
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+def calcular_pedido_view(request):
+    """Vista para calcular pedidos completos"""
+    empresas = Empresa.objects.filter(activo=True)
+    
+    context = {
+        'empresas': empresas,
+        'canales': ListaPrecio.CANAL_CHOICES,
+    }
+    return render(request, 'core/calcular_pedido.html', context)

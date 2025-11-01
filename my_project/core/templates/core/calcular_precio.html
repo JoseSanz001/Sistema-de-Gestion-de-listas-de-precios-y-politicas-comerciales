@@ -1,0 +1,246 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Calcular Precio - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="bi bi-calculator"></i> Calculadora de Precios</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="formCalcularPrecio">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-building"></i> Empresa *
+                    </label>
+                    <select name="empresa_id" id="empresa_id" class="form-select" required>
+                        <option value="">Seleccione una empresa...</option>
+                        {% for empresa in empresas %}
+                        <option value="{{ empresa.id }}">{{ empresa.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-shop"></i> Sucursal
+                    </label>
+                    <select name="sucursal_id" id="sucursal_id" class="form-select">
+                        <option value="">Todas (General)</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-box-seam"></i> Artículo *
+                    </label>
+                    <select name="articulo_id" id="articulo_id" class="form-select" required>
+                        <option value="">Seleccione un artículo...</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-shop-window"></i> Canal de Venta
+                    </label>
+                    <select name="canal" class="form-select">
+                        {% for value, label in canales %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-123"></i> Cantidad *
+                    </label>
+                    <input type="number" name="cantidad" class="form-control" 
+                           value="1" min="1" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-cash-stack"></i> Monto Total del Pedido
+                    </label>
+                    <input type="number" name="monto_pedido_total" class="form-control" 
+                           value="0" min="0" step="0.01">
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-calculator"></i> Calcular Precio
+                </button>
+            </div>
+        </form>
+        
+        <!-- Resultado -->
+        {% if resultado %}
+        <hr class="my-4">
+        
+        {% if resultado.error %}
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> {{ resultado.error }}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-md-12">
+                <h4 class="mb-4 text-center">
+                    <i class="bi bi-check-circle-fill text-success"></i> 
+                    Resultado del Cálculo
+                </h4>
+            </div>
+            
+            <!-- Precios -->
+            <div class="col-md-6 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Precio Base</h6>
+                        <h2 class="text-primary">S/. {{ resultado.precio_base|floatformat:2 }}</h2>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h6>Precio Final</h6>
+                        <h2>S/. {{ resultado.precio_final|floatformat:2 }}</h2>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Info adicional -->
+            <div class="col-md-12 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <strong>Lista de Precios:</strong> {{ resultado.lista_precio_nombre }}
+                        </p>
+                        <p class="mb-2">
+                            <strong>Descuento Total:</strong> 
+                            <span class="text-success">
+                                S/. {{ resultado.precio_base|add:"-"|add:resultado.precio_final|floatformat:2 }}
+                                ({{ resultado.precio_base|add:"-"|add:resultado.precio_final|floatformat:2|floatformat:0|add:resultado.precio_base|floatformat:0|add:"/" }}%)
+                            </span>
+                        </p>
+                        <p class="mb-0">
+                            <strong>Estado:</strong>
+                            {% if resultado.bajo_costo %}
+                            <span class="badge bg-warning">Bajo Costo</span>
+                            {% else %}
+                            <span class="badge bg-success">Precio Normal</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reglas Aplicadas -->
+            {% if resultado.reglas_aplicadas %}
+            <div class="col-md-12 mb-3">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check"></i> 
+                            Reglas Aplicadas ({{ resultado.reglas_aplicadas|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Regla</th>
+                                        <th>Tipo</th>
+                                        <th>Ajuste</th>
+                                        <th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for regla in resultado.reglas_aplicadas %}
+                                    <tr>
+                                        <td>{{ regla.nombre }}</td>
+                                        <td><span class="badge bg-info">{{ regla.tipo }}</span></td>
+                                        <td><span class="badge bg-secondary">{{ regla.tipo_ajuste }}</span></td>
+                                        <td class="text-success">-{{ regla.valor_ajuste }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Validación -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-shield-check"></i> Validación</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if resultado.validacion.es_valido %}
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-check-circle-fill"></i> 
+                            {{ resultado.validacion.mensaje }}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i> 
+                            {{ resultado.validacion.mensaje }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cargar sucursales y artículos al seleccionar empresa
+document.getElementById('empresa_id').addEventListener('change', function() {
+    const empresaId = this.value;
+    const sucursalSelect = document.getElementById('sucursal_id');
+    const articuloSelect = document.getElementById('articulo_id');
+    
+    // Limpiar selects
+    sucursalSelect.innerHTML = '<option value="">Todas (General)</option>';
+    articuloSelect.innerHTML = '<option value="">Seleccione un artículo...</option>';
+    
+    if (empresaId) {
+        // Cargar sucursales
+        fetch(`/api/sucursales/?empresa_id=${empresaId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.results.forEach(sucursal => {
+                    const option = document.createElement('option');
+                    option.value = sucursal.id;
+                    option.textContent = sucursal.nombre;
+                    sucursalSelect.appendChild(option);
+                });
+            });
+        
+        // Cargar artículos de la empresa
+        fetch(`/api/articulos/?empresa_id=${empresaId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.results.forEach(articulo => {
+                    const option = document.createElement('option');
+                    option.value = articulo.id;
+                    option.textContent = `${articulo.codigo} - ${articulo.nombre}`;
+                    articuloSelect.appendChild(option);
+                });
+            });
+    }
+});
+</script>
+{% endblock %}

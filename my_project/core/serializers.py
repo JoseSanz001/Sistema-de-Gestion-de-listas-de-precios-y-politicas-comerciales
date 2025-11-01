@@ -21,26 +21,48 @@ class SucursalSerializer(serializers.ModelSerializer):
 
 
 class LineaArticuloSerializer(serializers.ModelSerializer):
+    empresa_nombre = serializers.CharField(source='empresa.nombre', read_only=True)
+    
     class Meta:
         model = LineaArticulo
         fields = '__all__'
 
 
 class GrupoArticuloSerializer(serializers.ModelSerializer):
+    empresa_nombre = serializers.CharField(source='empresa.nombre', read_only=True)
     linea_nombre = serializers.CharField(source='linea.nombre', read_only=True)
     
     class Meta:
         model = GrupoArticulo
         fields = '__all__'
+    
+    def validate(self, data):
+        """Validar que la línea pertenezca a la misma empresa"""
+        if 'linea' in data and 'empresa' in data:
+            if data['linea'].empresa != data['empresa']:
+                raise serializers.ValidationError(
+                    "La línea debe pertenecer a la misma empresa"
+                )
+        return data
 
 
 class ArticuloSerializer(serializers.ModelSerializer):
+    empresa_nombre = serializers.CharField(source='empresa.nombre', read_only=True)
     grupo_nombre = serializers.CharField(source='grupo.nombre', read_only=True)
     linea_nombre = serializers.CharField(source='grupo.linea.nombre', read_only=True)
     
     class Meta:
         model = Articulo
         fields = '__all__'
+    
+    def validate(self, data):
+        """Validar que el grupo pertenezca a la misma empresa"""
+        if 'grupo' in data and 'empresa' in data:
+            if data['grupo'].empresa != data['empresa']:
+                raise serializers.ValidationError(
+                    "El grupo debe pertenecer a la misma empresa"
+                )
+        return data
 
 
 class ListaPrecioSerializer(serializers.ModelSerializer):

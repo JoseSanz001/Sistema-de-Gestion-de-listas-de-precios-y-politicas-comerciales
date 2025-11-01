@@ -1,0 +1,130 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Inicio - Sistema de Gestión de Precios{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+    <h1><i class="bi bi-graph-up-arrow"></i> Bienvenido al Sistema de Gestión de Listas de Precios</h1>
+    <p class="lead">Gestiona tus precios, políticas comerciales y descuentos de forma inteligente</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-building text-primary"></i>
+            <h3 class="text-primary">{{ total_empresas }}</h3>
+            <p>Empresas</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-shop text-success"></i>
+            <h3 class="text-success">{{ total_sucursales }}</h3>
+            <p>Sucursales</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-box-seam text-warning"></i>
+            <h3 class="text-warning">{{ total_articulos }}</h3>
+            <p>Artículos</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-list-ul text-danger"></i>
+            <h3 class="text-danger">{{ total_listas }}</h3>
+            <p>Listas de Precios</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-building" style="font-size: 3rem; color: var(--secondary-color);"></i>
+                <h4 class="mt-3">Gestionar Empresas</h4>
+                <p class="text-muted">Ver y administrar empresas y sucursales</p>
+                <a href="{% url 'empresas' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Ir a Empresas
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-calculator" style="font-size: 3rem; color: var(--success-color);"></i>
+                <h4 class="mt-3">Calcular Precios</h4>
+                <p class="text-muted">Calcula precios con reglas dinámicas</p>
+                <a href="{% url 'calcular-precio' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Calcular Ahora
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-gear" style="font-size: 3rem; color: var(--accent-color);"></i>
+                <h4 class="mt-3">Panel Admin</h4>
+                <p class="text-muted">Accede al panel de administración</p>
+                <a href="/admin/" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Ir al Admin
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Lists -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-list-ul"></i> Listas de Precios Activas
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Empresa</th>
+                        <th>Tipo</th>
+                        <th>Canal</th>
+                        <th>Vigencia</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lista in listas_activas %}
+                    <tr>
+                        <td><strong>{{ lista.nombre }}</strong></td>
+                        <td>{{ lista.empresa.nombre }}</td>
+                        <td><span class="badge bg-info">{{ lista.get_tipo_display }}</span></td>
+                        <td><span class="badge bg-secondary">{{ lista.get_canal_display }}</span></td>
+                        <td>{{ lista.fecha_inicio }} - {{ lista.fecha_fin|default:"Sin límite" }}</td>
+                        <td>
+                            {% if lista.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No hay listas de precios activas</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,7 +4,9 @@ from .views import (
     EmpresaViewSet, SucursalViewSet, LineaArticuloViewSet,
     GrupoArticuloViewSet, ArticuloViewSet, ListaPrecioViewSet,
     PrecioArticuloViewSet, ReglaPrecioViewSet, CombinacionProductoViewSet,
-    DetalleOrdenCompraClienteViewSet, PrecioCalculoViewSet
+    DetalleOrdenCompraClienteViewSet, PrecioCalculoViewSet, PedidoCalculoViewSet,
+    # Vistas HTML
+    home, empresas_view, dashboard_empresa, calcular_precio_view, calcular_pedido_view
 )
 
 # Crear el router de DRF
@@ -22,7 +24,16 @@ router.register(r'reglas-precios', ReglaPrecioViewSet, basename='regla-precio')
 router.register(r'combinaciones-productos', CombinacionProductoViewSet, basename='combinacion-producto')
 router.register(r'ordenes-compra', DetalleOrdenCompraClienteViewSet, basename='orden-compra')
 router.register(r'precios', PrecioCalculoViewSet, basename='precio-calculo')
+router.register(r'pedidos', PedidoCalculoViewSet, basename='pedido-calculo')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # API REST
+    path('api/', include(router.urls)),
+    
+    # Rutas HTML Frontend
+    path('', home, name='home'),
+    path('empresas/', empresas_view, name='empresas'),
+    path('empresa/<int:empresa_id>/dashboard/', dashboard_empresa, name='dashboard-empresa'),
+    path('calcular-precio/', calcular_precio_view, name='calcular-precio'),
+    path('calcular-pedido/', calcular_pedido_view, name='calcular-pedido'),
 ]
