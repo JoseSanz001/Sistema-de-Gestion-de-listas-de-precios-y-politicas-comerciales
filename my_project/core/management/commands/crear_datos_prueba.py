@@ -4,7 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 from core.models import (
     Empresa, Sucursal, LineaArticulo, GrupoArticulo, Articulo,
-    ListaPrecio, PrecioArticulo, ReglaPrecio, CombinacionProducto
+    ListaPrecio, PrecioArticulo, ReglaPrecio, CombinacionProducto, Usuario
 )
 
 
@@ -45,7 +45,89 @@ class Command(BaseCommand):
             email='ventas@laluna.com',
             activo=True
         )
-
+# 1.5. Crear Usuarios para cada Empresa
+        self.stdout.write('Creando usuarios...')
+        
+        # Usuario Administrador para Empresa 1
+        usuario_admin_emp1 = Usuario.objects.create_user(
+            username='admin_elsol',
+            email='admin@elsol.com',
+            password='admin123',
+            first_name='Carlos',
+            last_name='Administrador',
+            empresa=empresa1,
+            rol='ADMIN',
+            telefono='01-1234567',
+            is_staff=True,
+            activo=True
+        )
+        
+        # Usuario Gerente para Empresa 1
+        usuario_gerente_emp1 = Usuario.objects.create_user(
+            username='gerente_elsol',
+            email='gerente@elsol.com',
+            password='gerente123',
+            first_name='María',
+            last_name='Gerente',
+            empresa=empresa1,
+            rol='GERENTE',
+            telefono='01-1234568',
+            is_staff=True,
+            activo=True
+        )
+        
+        # Usuario Vendedor para Empresa 1
+        usuario_vendedor_emp1 = Usuario.objects.create_user(
+            username='vendedor_elsol',
+            email='vendedor@elsol.com',
+            password='vendedor123',
+            first_name='Juan',
+            last_name='Vendedor',
+            empresa=empresa1,
+            rol='VENDEDOR',
+            telefono='01-1234569',
+            is_staff=False,
+            activo=True
+        )
+        
+        # Usuario Administrador para Empresa 2
+        usuario_admin_emp2 = Usuario.objects.create_user(
+            username='admin_laluna',
+            email='admin@laluna.com',
+            password='admin123',
+            first_name='Ana',
+            last_name='Administrador',
+            empresa=empresa2,
+            rol='ADMIN',
+            telefono='044-123456',
+            is_staff=True,
+            activo=True
+        )
+        
+        # Usuario Gerente para Empresa 2
+        usuario_gerente_emp2 = Usuario.objects.create_user(
+            username='gerente_laluna',
+            email='gerente@laluna.com',
+            password='gerente123',
+            first_name='Pedro',
+            last_name='Gerente',
+            empresa=empresa2,
+            rol='GERENTE',
+            telefono='044-123457',
+            is_staff=True,
+            activo=True
+        )
+        
+        # Superusuario sin empresa (puede ver todo)
+        superuser = Usuario.objects.create_superuser(
+            username='superadmin',
+            email='super@admin.com',
+            password='super123',
+            first_name='Super',
+            last_name='Admin',
+            empresa=None,
+            rol='ADMIN'
+        )
         # 2. Crear Sucursales
         self.stdout.write('Creando sucursales...')
         sucursal1 = Sucursal.objects.create(
@@ -465,6 +547,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('✓ Datos de prueba creados exitosamente!'))
         self.stdout.write(self.style.SUCCESS(f'  - {Empresa.objects.count()} empresas'))
+        self.stdout.write(self.style.SUCCESS(f'  - {Usuario.objects.count()} usuarios'))
         self.stdout.write(self.style.SUCCESS(f'  - {Sucursal.objects.count()} sucursales'))
         self.stdout.write(self.style.SUCCESS(f'  - {LineaArticulo.objects.count()} líneas de artículos'))
         self.stdout.write(self.style.SUCCESS(f'  - {GrupoArticulo.objects.count()} grupos de artículos'))
@@ -473,3 +556,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  - {PrecioArticulo.objects.count()} precios de artículos'))
         self.stdout.write(self.style.SUCCESS(f'  - {ReglaPrecio.objects.count()} reglas de precio'))
         self.stdout.write(self.style.SUCCESS(f'  - {CombinacionProducto.objects.count()} combinaciones de productos'))
+
+        # Mostrar credenciales de acceso
+        self.stdout.write(self.style.SUCCESS('\n=== CREDENCIALES DE ACCESO ==='))
+        self.stdout.write(self.style.SUCCESS('Superadmin (acceso total):'))
+        self.stdout.write(self.style.SUCCESS('  Usuario: superadmin | Contraseña: super123'))
+        self.stdout.write(self.style.SUCCESS('\nDistribuidora El Sol SAC:'))
+        self.stdout.write(self.style.SUCCESS('  Admin: admin_elsol | Contraseña: admin123'))
+        self.stdout.write(self.style.SUCCESS('  Gerente: gerente_elsol | Contraseña: gerente123'))
+        self.stdout.write(self.style.SUCCESS('  Vendedor: vendedor_elsol | Contraseña: vendedor123'))
+        self.stdout.write(self.style.SUCCESS('\nComercial La Luna EIRL:'))
+        self.stdout.write(self.style.SUCCESS('  Admin: admin_laluna | Contraseña: admin123'))
+        self.stdout.write(self.style.SUCCESS('  Gerente: gerente_laluna | Contraseña: gerente123'))

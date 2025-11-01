@@ -1,10 +1,28 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     Empresa, Sucursal, LineaArticulo, GrupoArticulo, Articulo,
     ListaPrecio, PrecioArticulo, ReglaPrecio, CombinacionProducto,
-    DetalleOrdenCompraCliente
+    DetalleOrdenCompraCliente, Usuario
 )
 
+@admin.register(Usuario)
+class UsuarioAdmin(BaseUserAdmin):
+    list_display = ['username', 'email', 'first_name', 'last_name', 'empresa', 'rol', 'activo', 'is_staff']
+    list_filter = ['activo', 'rol', 'empresa', 'is_staff', 'is_superuser']
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'empresa__nombre']
+    
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('Información de Empresa', {
+            'fields': ('empresa', 'rol', 'telefono', 'activo')
+        }),
+    )
+    
+    add_fieldsets = BaseUserAdmin.add_fieldsets + (
+        ('Información de Empresa', {
+            'fields': ('empresa', 'rol', 'telefono', 'activo')
+        }),
+    )
 
 #Username (leave blank to use 'joses'): admin
 #Email address: admin@gmail.com 

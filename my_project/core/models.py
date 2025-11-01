@@ -1,6 +1,45 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
+from django.contrib.auth.models import AbstractUser
+from django.conf import settings
+
+class Usuario(AbstractUser):
+    """Usuario del sistema vinculado a una empresa"""
+    empresa = models.ForeignKey(
+        'Empresa', 
+        on_delete=models.CASCADE, 
+        related_name='usuarios',
+        null=True,
+        blank=True,
+        help_text='Empresa a la que pertenece el usuario'
+    )
+    rol = models.CharField(
+        max_length=20,
+        choices=[
+            ('ADMIN', 'Administrador'),
+            ('GERENTE', 'Gerente'),
+            ('VENDEDOR', 'Vendedor'),
+            ('VISUALIZADOR', 'Solo Visualización'),
+        ],
+        default='VENDEDOR'
+    )
+    telefono = models.CharField(max_length=20, blank=True)
+    activo = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'usuario'
+        verbose_name = 'Usuario'
+        verbose_name_plural = 'Usuarios'
+    
+    def __str__(self):
+        if self.empresa:
+            return f"{self.get_full_name()} ({self.empresa.nombre})"
+        return self.get_full_name() or self.username
+    
+    def es_superadmin(self):
+        """Verifica si es superusuario (sin empresa asignada)"""
+        return self.is_superuser or self.empresa is None
 
 class Empresa(models.Model):
     """Modelo para representar empresas"""
